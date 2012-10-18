@@ -10,7 +10,10 @@ use Time::localtime;
 #
 # fileList.pl
 # 
-# version 1.0
+# version 1.1
+#
+# created ????
+# modified 2012-10-17
 #
 # Create a list of files
 #
@@ -36,6 +39,8 @@ use Time::localtime;
 # --everything | -e			Get everything - all optional flags on
 #								equivalent to --recurse --path --size --date --hidden (same as --level 5)
 #								overrides all other flags, includuing --level
+# --[no]folders				Include folders in output (default: false)
+# --[no]files				Include files in output (default: true)
 # --help | -?				Displays help message	Default is not to show help message
 # --[no]debug				Display debugging information	Default is false
 # --[no]test				Test mode - display file names but do not process	Default is false
@@ -48,11 +53,16 @@ use Time::localtime;
 # * added a level preset feature
 # * added a "everything" flag that defaults settings to index all files and include all information
 # 
+# version 1.1
+# add file/folder flags to control what is included
+#
 
 my ( $directory_param, $recurse_param, $help_param );
 my ( $version_param, $debug_param, $test_param );
 my ( $output_param, $filter_param, $path_param, $size_param, $date_param );
 my ( $hidden_param, $everything_param, $level_param );
+my ( $folders_param, $files_param );
+my ( $is_file, $is_directory );
 my ( $output_filename, $output_string );
 my @MONTHS = qw( 01 02 03 04 05 06 07 08 09 10 11 12 );
 my @DAYS = qw( 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 );
@@ -70,6 +80,9 @@ GetOptions(	'directory|d=s'		=> \$directory_param,
 			'hidden|h!'			=> \$hidden_param,
 			'level|l=i'			=> \$level_param,
 			'everything|e'		=> \$everything_param,
+			'files!'			=> \$files_param,
+			'folders!'			=> \$folders_param,
+			'files!'			=> \$files_param,
 			'help|?'			=> \$help_param,
 			'version'			=> \$version_param,
 			'debug!'			=> \$debug_param,
@@ -87,6 +100,8 @@ if ( $debug_param ) {
 	print "hidden_param: $hidden_param\n";
 	print "level_param: $level_param\n";
 	print "everything_param: $everything_param\n";
+	print "files_param: $files_param\n";
+	print "folders_param: $folders_param\n";
 	print "version_param: $version_param\n";
 	print "debug_param: $debug_param\n";
 	print "test_param: $test_param\n";
@@ -96,7 +111,7 @@ if ( $debug_param ) {
 # If user asked for help, display help message and exit
 if ( $help_param ) {
 	print "fileList.pl\n\n";
-	print "version 1.0\n\n";
+	print "version 1.1\n\n";
 	print "Create a list of files\n\n";
 	print "Acceptable flags:\n\n";
 	print "--directory | -d [<directory>] - set starting directory\n";
@@ -131,12 +146,16 @@ if ( $help_param ) {
 	print "--everything | -e - includes everything\n";
 	print "equivalent to --hidden --recurse --path --size --date (same as --level 5)\n";
 	print "overrides other flags, including --level\n\n";
+	print "--[no]files\n";
+	print "\tinclude files in output (default: true)\n\n";
+	print "--[no]folders\n";
+	print "\tinclude folders in output (default: false)\n\n";
 	print "--help | -? - display this message\n\n";
 	exit;
 }
 
 if ( $version_param ) {
-	print "filelist.pl version 1.0\n";
+	print "filelist.pl version 1.1\n";
 	exit;
 }
 
@@ -153,9 +172,11 @@ if ( $size_param eq undef ) { $size_param = 0; }		# False
 if ( $date_param eq undef ) { $date_param = 0; }		# False
 if ( $debug_param eq undef ) { $debug_param = 0; }		# False
 if ( $test_param eq undef ) { $test_param = 0; }		# False
+if ( $files_param eq undef ) { $files_param = 1; }		# True
+if ( $folders_param eq undef ) { $folders_param = 0; }	# False
 
 # Change parameters if preset is specified
-if ( $level_param == 0 ) {
+if ( ( $level_param == 0 ) && ( $level_param ne undef ) ) {
 	$hidden_param = 0;
 	$recurse_param = 0;
 	$path_param = 0;
@@ -213,6 +234,8 @@ if ( $debug_param ) {
 	print "hidden_param: $hidden_param\n";
 	print "level_param: $level_param\n";
 	print "everything_param: $everything_param\n";
+	print "files_param: $files_param\n";
+	print "folders_param: $folders_param\n";
 	print "version_param: $version_param\n";
 	print "debug_param: $debug_param\n";
 	print "test_param: $test_param\n";
@@ -220,7 +243,6 @@ if ( $debug_param ) {
 }
 
 $output_string = "";			# Empty the output string
-if ( $debug_param ) { $output_string .= "DEBUG: output:\n"; }
 chdir( $directory_param );		# Change to the target directory
 find( \&doittoit, "." ); 		# Do the file filtering
 
@@ -238,7 +260,7 @@ if ( ! $test_param ) {			# If we're not in test mode, create the file
 sub doittoit {
 	# Check to see if each file is in the target directory of a subdirectory
 	# If recursion is on, process all of the files
-	if ( ( ( $recurse_param || $File::Find::dir eq "." ) && ( ! -d ) ) &&
+	if ( ( ( $recurse_param || $File::Find::dir eq "." ) ) &&
 	( $filter_param eq undef || ( ( $filter_param ne undef ) && ( /$filter_param/ ) ) ) ) {
 		# Get some information about the item
 		#	Full path of item
@@ -248,9 +270,11 @@ sub doittoit {
 		#	Leaf (name of file or directory)
 		my ( $full_path, $parent_dir, $leaf_name, $twig_name, $branch_name, $work_space );
 		
+		$is_directory = ( -d );
+				
 		$full_path = $directory_param . "/" . $File::Find::name;	# Create full path
 		$full_path =~ s/\\/\//g;					# Turn around any backwards slashes
-		if ( -d ) { $full_path .= "/"; }			# Add slash to end of the path if it is a directory
+		if ( $is_directory ) { $full_path .= "/"; }	# Add slash to end of the path if it is a directory
 		$full_path =~ s/\/.\//\//;					# Remove extra "/./"
 		$full_path =~ s/\/\//\//g;					# Remove any duplicate slashes
 				
@@ -265,12 +289,21 @@ sub doittoit {
 		$work_space =~ s/\/([^\/]+)$//g;
 		$branch_name = $1;
 		
-		
 		# Check to see if file is hidden or contained in a hidden directory
 		# if it is, we should ignore it
 		if ( ( !$hidden_param ) && ( $full_path =~ m/\/\./ ) ) {
 			if ( $debug_param ) { print "DEBUG: file $full_path is hidden and not indexed\n"; }
 			return 0;	# file was not indexed
+		}
+		
+		# Check to see if we should index this based on --files and --folders
+		if ( ( $is_directory ) && ( !$folders_param ) ) {
+			if ( $debug_param ) { print "DEBUG: folder $full_path not indexed because --folders not specified\n"; }
+			return 0; 	# file was not indexed
+		}
+		if ( ( !$is_directory ) && ( !$files_param ) ) {
+			if ( $debug_param ) { print "DEBUG: file $full_path not indexed because --files not specified\n"; }
+			return 0; 	# file was not indexed
 		}
 
 		# get file size and modification date
@@ -300,6 +333,7 @@ sub doittoit {
 			print "\n";
 		}
 		
+		# if we get here, the file was indexed and added to the output
 		return 1;	# file indexed
 	}
 }
