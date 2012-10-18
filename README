@@ -1,0 +1,49 @@
+filelist.pl
+
+Perl script to list all the files and/or folders in a directory (and optionally subdirectories).
+
+Theron Trowbridge
+http://therontrowbridge.com
+
+Created: a long time ago
+Modified: 2012-10-18
+
+
+Flags:
+
+--directory | -d			Specifies starting directory	Default is current working directory
+--[no]recurse | -[no]r	Recursively search sub-folders	Default is no recursive searching
+--filter | -f <regex>		Process only if filename matches regex
+--output | -o <filename>	Output results to file	Default is files_YYYYMMDD.txt
+ 								<filename> = STDIO outputs to <STDIO>
+--[no]path | -[no]p		Include full path in output	Default is to not include full path
+--[no]size | -[no]s		Include file size in output	Default is to not include file size
+--[no]date | -[no]d		Include file mod date in ouptut	Default is to not include file mod date
+--[no]hidden | -[no]h		Include hidden files (default is true)
+--level | -l <n>			Set output level
+								--level 0 is same as --nohidden --norecurse --nopath --nosize --nodate
+								--level 1 is same as --hidden --norecurse --nopath --nosize --nodate
+								--level 2 is same as --hidden --recurse --nopath --nosize --nodate
+								--level 3 is same as --hidden --recurse --path --nosize --nodate
+								--level 4 is same as --hidden --recurse --path --size --nodate
+								--level 5 is same as --hidden --recurse --path --size --date
+							overrides these flags
+--everything | -e			Get everything - all optional flags on
+								equivalent to --recurse --path --size --date --hidden (same as --level 5)
+								overrides all other flags, includuing --level
+--[no]folders				Include folders in output (default: false)
+--[no]files				Include files in output (default: true)
+--help | -?				Displays help message	Default is not to show help message
+--[no]debug				Display debugging information	Default is false
+--[no]test				Test mode - display file names but do not process	Default is false
+
+
+Revsion history
+
+version 1.0
+ * added option to ignore Linux/Mac OS X style "hidden" files
+ * added a level preset feature
+ * added a "everything" flag that defaults settings to index all files and include all information
+
+version 1.1
+ added file/folder flags to control what is included
