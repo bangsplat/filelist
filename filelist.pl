@@ -10,10 +10,10 @@ use Time::localtime;
 #
 # fileList.pl
 # 
-# version 1.1
+# version 1.2
 #
 # created ????
-# modified 2012-10-17
+# modified 2013-06-29
 #
 # Create a list of files
 #
@@ -55,6 +55,9 @@ use Time::localtime;
 # 
 # version 1.1
 # add file/folder flags to control what is included
+#
+# version 1.2
+# fixed bug with directory filtering
 #
 
 my ( $directory_param, $recurse_param, $help_param );
@@ -275,7 +278,7 @@ sub doittoit {
 		$full_path = $directory_param . "/" . $File::Find::name;	# Create full path
 		$full_path =~ s/\\/\//g;					# Turn around any backwards slashes
 		if ( $is_directory ) { $full_path .= "/"; }	# Add slash to end of the path if it is a directory
-		$full_path =~ s/\/.\//\//;					# Remove extra "/./"
+		$full_path =~ s/\/\.\//\//;					# Remove extra "/./"
 		$full_path =~ s/\/\//\//g;					# Remove any duplicate slashes
 				
 		$parent_dir = $full_path;
