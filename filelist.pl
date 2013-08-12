@@ -10,10 +10,10 @@ use Time::localtime;
 #
 # fileList.pl
 # 
-# version 1.2
+# version 1.3
 #
 # created ????
-# modified 2013-06-29
+# modified 2013-08-12
 #
 # Create a list of files
 #
@@ -58,6 +58,9 @@ use Time::localtime;
 #
 # version 1.2
 # fixed bug with directory filtering
+#
+# version 1.3
+# finally found and fixed the bug that caused a crash when getting file size of certain problem files/folders
 #
 
 my ( $directory_param, $recurse_param, $help_param );
@@ -308,17 +311,27 @@ sub doittoit {
 			if ( $debug_param ) { print "DEBUG: file $full_path not indexed because --files not specified\n"; }
 			return 0; 	# file was not indexed
 		}
-
-		# get file size and modification date
-		my $file_stat = stat( $full_path );
-		my $file_size = $file_stat->size;
-		my $file_mod = scalar( CORE::localtime( $file_stat->mtime ) );
+		
+		my ( $file_stat, $file_size, $file_mod );
+		$file_stat = stat( $full_path );
+		
+		# if stat() fails, the script will bomb out when we try to get the file size
+		# and no output will be written
+		# so skip file if stat() fails
+		if ( $file_stat eq undef ) {
+			print "ERROR: stat() failed for $full_path\n";
+			return 0;
+		}
+		
+		$file_size = $file_stat->size;
+		$file_mod = scalar( CORE::localtime( $file_stat->mtime ) );
 		
 		if ( $path_param ) { $output_string .= "$full_path"; }
 		else { $output_string .= "$leaf_name"; }
 
 		if ( $size_param ) { $output_string .= "\t$file_size"; }
 		if ( $date_param ) { $output_string .= "\t$file_mod"; }
+		
 		$output_string .= "\n";
 		
 		if ( $debug_param ) {
