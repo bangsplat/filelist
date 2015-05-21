@@ -10,10 +10,10 @@ use Time::localtime;
 #
 # fileList.pl
 # 
-# version 1.3
+# version 1.4
 #
 # created ????
-# modified 2013-08-12
+# modified 2015-05-21
 #
 # Create a list of files
 #
@@ -62,6 +62,10 @@ use Time::localtime;
 # version 1.3
 # finally found and fixed the bug that caused a crash when getting file size of certain problem files/folders
 #
+# version 1.4
+# converting modified date to ISO date format
+# 
+
 
 my ( $directory_param, $recurse_param, $help_param );
 my ( $version_param, $debug_param, $test_param );
@@ -117,7 +121,7 @@ if ( $debug_param ) {
 # If user asked for help, display help message and exit
 if ( $help_param ) {
 	print "fileList.pl\n\n";
-	print "version 1.1\n\n";
+	print "version 1.4\n\n";
 	print "Create a list of files\n\n";
 	print "Acceptable flags:\n\n";
 	print "--directory | -d [<directory>] - set starting directory\n";
@@ -161,7 +165,7 @@ if ( $help_param ) {
 }
 
 if ( $version_param ) {
-	print "filelist.pl version 1.1\n";
+	print "filelist.pl version 1.4\n";
 	exit;
 }
 
@@ -330,7 +334,7 @@ sub doittoit {
 		else { $output_string .= "$leaf_name"; }
 
 		if ( $size_param ) { $output_string .= "\t$file_size"; }
-		if ( $date_param ) { $output_string .= "\t$file_mod"; }
+		if ( $date_param ) { $output_string .= "\t" . ctime_to_ISO( $file_mod ); }
 		
 		$output_string .= "\n";
 		
@@ -352,4 +356,40 @@ sub doittoit {
 		# if we get here, the file was indexed and added to the output
 		return 1;	# file indexed
 	}
+}
+
+sub ctime_to_ISO {
+	my $ctime = shift;
+	my ( $file_day, $file_month, $file_mday, $file_time, $file_year );
+	
+	$ctime =~ m/^([A-Za-z]*)\s*([A-Za-z]*)\s*([0-9]*)\s*([0-9:]*)\s*([0-9]*)$/;
+	$file_day = $1;
+	$file_month = $2;
+	$file_mday = $3;
+	$file_time = $4;
+	$file_year = $5;
+	
+	return( "$file_year-" . leading_zero( number_of_month( $file_month ) ) . "-" . leading_zero( $file_mday ) . "T$file_time" );
+	
+}
+
+sub number_of_month {
+	my $month = shift;
+	if ( $month eq "Jan" ) { return( 1 ); }
+	if ( $month eq "Feb" ) { return( 2 ); }
+	if ( $month eq "Mar" ) { return( 3 ); }
+	if ( $month eq "Apr" ) { return( 4 ); }
+	if ( $month eq "May" ) { return( 5 ); }
+	if ( $month eq "Jun" ) { return( 6 ); }
+	if ( $month eq "Jul" ) { return( 7 ); }
+	if ( $month eq "Aug" ) { return( 8 ); }
+	if ( $month eq "Sep" ) { return( 9 ); }
+	if ( $month eq "Oct" ) { return( 10 ); }
+	if ( $month eq "Nov" ) { return( 11 ); }
+	if ( $month eq "Dec" ) { return( 12 ); }
+}
+
+sub leading_zero {
+	my $input = shift;
+	if ( length( $input ) < 2 ) { return( "0" . $input ); } else { return( $input ); }
 }
